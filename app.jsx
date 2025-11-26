@@ -166,8 +166,9 @@ function CalculateurXPO() {
     try {
       const res = await fetch(`http://127.0.0.1:4000/api/xpo/slots?shipment=${encodeURIComponent(shipmentRef)}`);
       const data = await res.json();
-      setSlotInfo(data.slots?.[0] || null);
-      if (!data.slots?.length) setXpoError("Aucun créneau retourné par le bridge");
+      const slot = data && data.slots && data.slots.length ? data.slots[0] : null;
+      setSlotInfo(slot);
+      if (!slot) setXpoError("Aucun créneau retourné par le bridge");
     } catch (e) {
       setXpoError(e.message || "Erreur bridge XPO");
     } finally {
