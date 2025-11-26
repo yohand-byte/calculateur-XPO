@@ -160,8 +160,8 @@ function CalculateurXPO() {
   const FRAIS_FIXES_PREMIUM = 30;
   const FRAIS_FIXES_TARGET = 15;
   const FRAIS_FIXES_PRISE_RDV = 5;
-  // Bridge XPO tourne en local sur le même poste
-  const API_BASE = "http://127.0.0.1:4000";
+  // Bridge XPO tourne sur la même machine (host courant, port 4000)
+  const API_BASE = `${window.location.protocol}//${window.location.hostname}:4000`;
 
   const fetchSlot = () => {
     setXpoError(""); setBookingInfo(null); setSlotInfo(null); setXpoLoading(true);
