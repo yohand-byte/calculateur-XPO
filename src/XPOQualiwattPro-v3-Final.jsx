@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Truck, DollarSign, TrendingDown, AlertCircle, Moon, Check, 
   MapPin, Package, Calendar, Phone, Mail, Plus, Trash2, Edit2, Save, X,
@@ -178,6 +178,30 @@ export default function XPOQualiwattProV3() {
     accentBg: 'bg-emerald-50',
     accentBorder: 'border-emerald-200',
   };
+
+  // PERSISTENCE (adresses)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('xpo_adresses_v3');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Toujours garantir l'adresse Qualiwatt par défaut
+        const hasDefault = parsed.some((a) => a.id === 'qualiwatt-default');
+        const finalList = hasDefault ? parsed : [addresseQualiwatt, ...parsed];
+        setAdresses(finalList);
+      }
+    } catch (e) {
+      console.warn('Adresse: lecture localStorage échouée', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('xpo_adresses_v3', JSON.stringify(adresses));
+    } catch (e) {
+      console.warn('Adresse: sauvegarde localStorage échouée', e);
+    }
+  }, [adresses]);
 
   // CALCULS TARIF
   const calculs = useMemo(() => {
