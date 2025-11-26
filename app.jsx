@@ -160,12 +160,20 @@ function CalculateurXPO() {
   const FRAIS_FIXES_PREMIUM = 30;
   const FRAIS_FIXES_TARGET = 15;
   const FRAIS_FIXES_PRISE_RDV = 5;
-  // Bridge XPO tourne sur la même machine (host courant, port 4000)
-  const API_BASE = `${window.location.protocol}//${window.location.hostname}:4000`;
+  // Bridge XPO local (essaie 127.0.0.1 puis host courant)
+  const API_HOSTS = [
+    "http://127.0.0.1:4000",
+    `${window.location.protocol}//${window.location.hostname}:4000`,
+  ];
+
+  const tryFetch = (path, init) =>
+    API_HOSTS.reduce((chain, host) => {
+      return chain.catch(() => fetch(host + path, init));
+    }, Promise.reject());
 
   const fetchSlot = () => {
     setXpoError(""); setBookingInfo(null); setSlotInfo(null); setXpoLoading(true);
-    fetch(`${API_BASE}/api/xpo/slots?shipment=` + encodeURIComponent(shipmentRef))
+    tryFetch(`/api/xpo/slots?shipment=` + encodeURIComponent(shipmentRef))
       .then(res => res.json())
       .then(data => {
         const slot = data && data.slots && data.slots.length ? data.slots[0] : null;
@@ -179,7 +187,7 @@ function CalculateurXPO() {
   const bookSlot = () => {
     if (!slotInfo) return;
     setXpoError(""); setBookingInfo(null); setXpoLoading(true);
-    fetch(`${API_BASE}/api/xpo/book`, {
+    tryFetch(`/api/xpo/book`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ shipment: shipmentRef, slotId: slotInfo.id })
