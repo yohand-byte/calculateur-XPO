@@ -132,6 +132,11 @@ function CalculateurXPO() {
   const [target, setTarget] = useState(false);
   const [priseRdv, setPriseRdv] = useState(false);
   const [tauxGasoil, setTauxGasoil] = useState(0.0579);
+  const [shipmentRef, setShipmentRef] = useState("REF-TEST");
+  const [slotInfo, setSlotInfo] = useState(null);
+  const [bookingInfo, setBookingInfo] = useState(null);
+  const [xpoLoading, setXpoLoading] = useState(false);
+  const [xpoError, setXpoError] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem('xpoAccess');
@@ -155,6 +160,39 @@ function CalculateurXPO() {
   const FRAIS_FIXES_PREMIUM = 30;
   const FRAIS_FIXES_TARGET = 15;
   const FRAIS_FIXES_PRISE_RDV = 5;
+
+  const fetchSlot = async () => {
+    setXpoError(""); setBookingInfo(null); setSlotInfo(null); setXpoLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:4000/api/xpo/slots?shipment=${encodeURIComponent(shipmentRef)}`);
+      const data = await res.json();
+      setSlotInfo(data.slots?.[0] || null);
+      if (!data.slots?.length) setXpoError("Aucun créneau retourné par le bridge");
+    } catch (e) {
+      setXpoError(e.message || "Erreur bridge XPO");
+    } finally {
+      setXpoLoading(false);
+    }
+  };
+
+  const bookSlot = async () => {
+    if (!slotInfo) return;
+    setXpoError(""); setBookingInfo(null); setXpoLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:4000/api/xpo/book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shipment: shipmentRef, slotId: slotInfo.id })
+      });
+      const data = await res.json();
+      setBookingInfo(data.confirmation || null);
+      if (data.error) setXpoError(data.error);
+    } catch (e) {
+      setXpoError(e.message || "Erreur booking XPO");
+    } finally {
+      setXpoLoading(false);
+    }
+  };
 
   const calculs = useMemo(() => {
     const grilleDepot = tarifs[departement] || tarifs["35 - Ille et Vilaine"];
@@ -441,6 +479,60 @@ function CalculateurXPO() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* XPO bridge section */}
+        <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className={`${colors.card} rounded-xl p-6`}>
+            <h3 className={`text-lg font-semibold mb-4 ${colors.text}`}>Prise de RDV XPO</h3>
+            <label className={`block text-xs font-bold ${colors.textSecondary} mb-2 uppercase tracking-widest`}>
+              Référence expédition
+            </label>
+            <input
+              value={shipmentRef}
+              onChange={(e) => setShipmentRef(e.target.value)}
+              className={`w-full px-4 py-2.5 rounded-lg ${colors.input} border transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+              placeholder="REF-12345"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={fetchSlot}
+                disabled={xpoLoading}
+                className={`px-4 py-2 rounded-lg ${colors.button} text-sm font-semibold`}
+              >
+                {xpoLoading ? "..." : "Proposer un RDV"}
+              </button>
+              <button
+                onClick={bookSlot}
+                disabled={!slotInfo || xpoLoading}
+                className={`px-4 py-2 rounded-lg ${slotInfo ? colors.button : 'bg-slate-300 text-slate-500'} text-sm font-semibold`}
+              >
+                {xpoLoading ? "..." : "Confirmer"}
+              </button>
+            </div>
+            {xpoError && <p className="text-red-500 text-sm mt-3">{xpoError}</p>}
+            {slotInfo && (
+              <div className={`${colors.accentBg} border ${colors.accentBorder} rounded-lg p-3 mt-4`}>
+                <p className={`text-sm font-semibold ${colors.accent}`}>{slotInfo.label}</p>
+                <p className={`text-xs ${colors.textSecondary}`}>Slot ID: {slotInfo.id}</p>
+              </div>
+            )}
+            {bookingInfo && (
+              <div className={`${colors.accentBg} border ${colors.accentBorder} rounded-lg p-3 mt-3`}>
+                <p className={`text-sm font-semibold ${colors.accent}`}>RDV confirmé</p>
+                <p className={`text-xs ${colors.textSecondary}`}>Date : {bookingInfo.date}</p>
+                <p className={`text-xs ${colors.textSecondary}`}>Créneau : {bookingInfo.window}</p>
+              </div>
+            )}
+          </div>
+          <div className="lg:col-span-2 text-sm leading-6">
+            <div className={`${colors.card} rounded-xl p-6`}>
+              <p className={`${colors.textSecondary}`}>
+                Le bridge XPO applique la règle contrat : demande avant 12h → enlèvement J+1, après 12h → J+2, fenêtre 14h–16h.
+                Le bouton “Proposer un RDV” interroge `GET /api/xpo/slots`, “Confirmer” appelle `POST /api/xpo/book` avec le Slot ID.
+              </p>
+            </div>
           </div>
         </div>
 
