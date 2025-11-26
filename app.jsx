@@ -161,38 +161,34 @@ function CalculateurXPO() {
   const FRAIS_FIXES_TARGET = 15;
   const FRAIS_FIXES_PRISE_RDV = 5;
 
-  const fetchSlot = async () => {
+  const fetchSlot = () => {
     setXpoError(""); setBookingInfo(null); setSlotInfo(null); setXpoLoading(true);
-    try {
-      const res = await fetch(`http://127.0.0.1:4000/api/xpo/slots?shipment=${encodeURIComponent(shipmentRef)}`);
-      const data = await res.json();
-      const slot = data && data.slots && data.slots.length ? data.slots[0] : null;
-      setSlotInfo(slot);
-      if (!slot) setXpoError("Aucun créneau retourné par le bridge");
-    } catch (e) {
-      setXpoError(e.message || "Erreur bridge XPO");
-    } finally {
-      setXpoLoading(false);
-    }
+    fetch("http://127.0.0.1:4000/api/xpo/slots?shipment=" + encodeURIComponent(shipmentRef))
+      .then(res => res.json())
+      .then(data => {
+        const slot = data && data.slots && data.slots.length ? data.slots[0] : null;
+        setSlotInfo(slot);
+        if (!slot) setXpoError("Aucun créneau retourné par le bridge");
+      })
+      .catch(e => setXpoError(e.message || "Erreur bridge XPO"))
+      .finally(() => setXpoLoading(false));
   };
 
-  const bookSlot = async () => {
+  const bookSlot = () => {
     if (!slotInfo) return;
     setXpoError(""); setBookingInfo(null); setXpoLoading(true);
-    try {
-      const res = await fetch(`http://127.0.0.1:4000/api/xpo/book`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shipment: shipmentRef, slotId: slotInfo.id })
-      });
-      const data = await res.json();
-      setBookingInfo(data.confirmation || null);
-      if (data.error) setXpoError(data.error);
-    } catch (e) {
-      setXpoError(e.message || "Erreur booking XPO");
-    } finally {
-      setXpoLoading(false);
-    }
+    fetch("http://127.0.0.1:4000/api/xpo/book", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shipment: shipmentRef, slotId: slotInfo.id })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setBookingInfo(data.confirmation || null);
+        if (data.error) setXpoError(data.error);
+      })
+      .catch(e => setXpoError(e.message || "Erreur booking XPO"))
+      .finally(() => setXpoLoading(false));
   };
 
   const calculs = useMemo(() => {
