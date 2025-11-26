@@ -1,3 +1,6 @@
 XPO DOC.pdf
-node_modules/
 .DS_Store
+.vercel
+node_modules/
+dist/
+package-lock.json
